@@ -49,6 +49,7 @@ static const float STEP_SIZE_DEG = 1.8;  // Degrees rotation per step
 static const float MICRO_STEPS = 8;      // Number of microsteps per step
 static const float THREADS_PER_CM = 8;   // Number of threads in rod per cm of length
 static const float BASE_LEN_CM = 30.5;   // Length from hinge to center of rod in cm
+static const float INITIAL_ANGLE = 0;    // Initial angle of barn doors when switched on
 
 // Nothing below this line should require changing unless your barndoor
 // is not an Isoceles mount, or you changed the electrical circuit design
@@ -91,6 +92,15 @@ long time_to_usteps(long tsecs)
                   sin(tsecs * PI / SIDE_REAL_SECS));
 }
 
+
+// Given an angle, figure out the usteps required to get to
+// that point.
+long angle_to_usteps(float angle)
+{
+    return time_to_usteps(SIDE_REAL_SECS / 360.0 * angle);
+}
+
+
 // Given total number of steps from 100% closed position, figure out
 // the corresponding total tracking time in seconds
 long usteps_to_time(long usteps)
@@ -103,6 +113,9 @@ long usteps_to_time(long usteps)
 // These variables are initialized when the motor switches
 // from stopped to running, so we know our starting conditions
 
+// If the barn door doesn't go to 100% closed, this records
+// the inital offset we started from for INITIAL_ANGLE
+static long offsetPositionUSteps;
 // Total motor steps since 100% closed, at the time the
 // motor started running
 static long startPositionUSteps;
@@ -135,9 +148,19 @@ void setup(void)
     motor.setPinsInverted(true, false, false);
     motor.setMaxSpeed(3000);
 
+    offsetPositionUSteps = angle_to_usteps(INITIAL_ANGLE);
+
 #ifdef DEBUG
     Serial.begin(9600);
 #endif
+}
+
+
+// The logical motor position which takes into account the
+// fact that we have an initial opening angle
+long motor_position()
+{
+    return motor.currentPosition() + offsetPositionUSteps;
 }
 
 
@@ -150,14 +173,16 @@ void setup(void)
 // to figure out subsequent deltas
 void start_tracking(void)
 {
-    startPositionUSteps = motor.currentPosition();
+    startPositionUSteps = motor_position();
     startPositionSecs = usteps_to_time(startPositionUSteps);
     startWallClockSecs = millis() / 1000;
     targetWallClockSecs = startWallClockSecs;
 
 #ifdef DEBUG
     Serial.print("Enter sidereal\n");
-    Serial.print("start pos usteps: ");
+    Serial.print("offset pos usteps: ");
+    Serial.print(offsetPositionUSteps);
+    Serial.print(", start pos usteps: ");
     Serial.print(startPositionUSteps);
     Serial.print(", start pos secs: ");
     Serial.print(startPositionSecs);
@@ -207,14 +232,14 @@ void plan_tracking(void)
 void apply_tracking(long currentWallClockSecs)
 {
     long timeLeft = targetWallClockSecs - currentWallClockSecs;
-    long stepsLeft = targetPositionUSteps - motor.currentPosition();
+    long stepsLeft = targetPositionUSteps - motor_position();
     float stepsPerSec = (float)stepsLeft / (float)timeLeft;
 
 #ifdef DEBUG32
     Serial.print("Target ");
     Serial.print(targetPositionUSteps);
     Serial.print("  curr ");
-    Serial.print(motor.currentPosition());
+    Serial.print(motor_position());
     Serial.print("  left");
     Serial.print(stepsLeft);
     Serial.print("\n");
