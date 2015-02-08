@@ -1,3 +1,4 @@
+// -*- c -*-
 //
 // barndoor.ino: arduino code for an astrophotography barndoor mount
 //
@@ -74,31 +75,31 @@ static FSM barndoor = FSM(stateOff);
 // the total number of steps required to achieve that
 long time_to_usteps(long tsecs)
 {
-  return (long)(USTEPS_PER_ROTATION *
-                THREADS_PER_CM * 2.0 * BASE_LEN_CM *
-                sin(tsecs * PI / SIDE_REAL_SECS));
+    return (long)(USTEPS_PER_ROTATION *
+                  THREADS_PER_CM * 2.0 * BASE_LEN_CM *
+                  sin(tsecs * PI / SIDE_REAL_SECS));
 }
 
 // Given total number of steps from 100% closed position, figure out
 // the corresponding total tracking time in seconds
 long usteps_to_time(long usteps)
 {
-  return (long)(asin(usteps /
-                     (USTEPS_PER_ROTATION * THREADS_PER_CM * 2.0 * BASE_LEN_CM)) *
-                SIDE_REAL_SECS / PI);
+    return (long)(asin(usteps /
+                       (USTEPS_PER_ROTATION * THREADS_PER_CM * 2.0 * BASE_LEN_CM)) *
+                  SIDE_REAL_SECS / PI);
 }
 
 void setup(void)
 {
-  pinMode(pinInAutomatic, OUTPUT);
-  pinMode(pinInManual, OUTPUT);
-  pinMode(pinInDirection, OUTPUT);
+    pinMode(pinInAutomatic, OUTPUT);
+    pinMode(pinInManual, OUTPUT);
+    pinMode(pinInDirection, OUTPUT);
 
-  motor.setPinsInverted(true, false, false);
-  motor.setMaxSpeed(3000);
+    motor.setPinsInverted(true, false, false);
+    motor.setMaxSpeed(3000);
 
 #ifdef DEBUG
-  Serial.begin(9600);
+    Serial.begin(9600);
 #endif
 }
 
@@ -136,20 +137,20 @@ static long targetPositionUSteps;
 // to figure out subsequent deltas
 void start_tracking(void)
 {
-  startPositionUSteps = motor.currentPosition();
-  startPositionSecs = usteps_to_time(startPositionUSteps);
-  startWallClockSecs = millis() / 1000;
-  targetWallClockSecs = startWallClockSecs;
+    startPositionUSteps = motor.currentPosition();
+    startPositionSecs = usteps_to_time(startPositionUSteps);
+    startWallClockSecs = millis() / 1000;
+    targetWallClockSecs = startWallClockSecs;
 
 #ifdef DEBUG
-  Serial.print("Enter auto\n");
-  Serial.print("start pos usteps: ");
-  Serial.print(startPositionUSteps);
-  Serial.print(", start pos secs: ");
-  Serial.print(startPositionSecs);
-  Serial.print(", start wclk secs: ");
-  Serial.print(startWallClockSecs);
-  Serial.print("\n\n");
+    Serial.print("Enter auto\n");
+    Serial.print("start pos usteps: ");
+    Serial.print(startPositionUSteps);
+    Serial.print(", start pos secs: ");
+    Serial.print(startPositionSecs);
+    Serial.print(", start wclk secs: ");
+    Serial.print(startWallClockSecs);
+    Serial.print("\n\n");
 #endif
 }
 
@@ -164,9 +165,9 @@ void start_tracking(void)
 // 15 seconds  in the future
 void plan_tracking(void)
 {
-  targetWallClockSecs = targetWallClockSecs + 15;
-  targetPositionSecs = startPositionSecs + (targetWallClockSecs - startWallClockSecs);
-  targetPositionUSteps = time_to_usteps(targetPositionSecs);
+    targetWallClockSecs = targetWallClockSecs + 15;
+    targetPositionSecs = startPositionSecs + (targetWallClockSecs - startWallClockSecs);
+    targetPositionUSteps = time_to_usteps(targetPositionSecs);
 
 #ifdef DEBUG
     Serial.print("target pos usteps: ");
@@ -192,22 +193,22 @@ void plan_tracking(void)
 // constant rate
 void apply_tracking(long currentWallClockSecs)
 {
-  long timeLeft = targetWallClockSecs - currentWallClockSecs;
-  long stepsLeft = targetPositionUSteps - motor.currentPosition();
-  float stepsPerSec = (float)stepsLeft / (float)timeLeft;
+    long timeLeft = targetWallClockSecs - currentWallClockSecs;
+    long stepsLeft = targetPositionUSteps - motor.currentPosition();
+    float stepsPerSec = (float)stepsLeft / (float)timeLeft;
 
 #ifdef DEBUG32
-  Serial.print("Target ");
-  Serial.print(targetPositionUSteps);
-  Serial.print("  curr ");
-  Serial.print(motor.currentPosition());
-  Serial.print("  left");
-  Serial.print(stepsLeft);
-  Serial.print("\n");
+    Serial.print("Target ");
+    Serial.print(targetPositionUSteps);
+    Serial.print("  curr ");
+    Serial.print(motor.currentPosition());
+    Serial.print("  left");
+    Serial.print(stepsLeft);
+    Serial.print("\n");
 #endif
 
-  motor.setSpeed(stepsPerSec);
-  motor.runSpeed();
+    motor.setSpeed(stepsPerSec);
+    motor.runSpeed();
 }
 
 
@@ -215,8 +216,8 @@ void apply_tracking(long currentWallClockSecs)
 // in sidereal tracking mode
 void state_auto_enter(void)
 {
-  start_tracking();
-  plan_tracking();
+    start_tracking();
+    plan_tracking();
 }
 
 
@@ -228,24 +229,24 @@ void state_auto_enter(void)
 // tracking rate
 void state_auto_update(void)
 {
-  long currentWallClockSecs = millis() / 1000;
+    long currentWallClockSecs = millis() / 1000;
 
-  if (currentWallClockSecs >= targetWallClockSecs) {
-    plan_tracking();
-  }
+    if (currentWallClockSecs >= targetWallClockSecs) {
+        plan_tracking();
+    }
 
-  apply_tracking(currentWallClockSecs);
+    apply_tracking(currentWallClockSecs);
 }
 
 void state_auto_exit(void)
 {
-  // nada
+    // nada
 }
 
 void state_manual_enter(void)
 {
 #ifdef DEBUG
-  Serial.print("Enter manual\n");
+    Serial.print("Enter manual\n");
 #endif
 }
 
@@ -256,57 +257,64 @@ void state_manual_enter(void)
 // the motor
 void state_manual_update(void)
 {
-  // pinInDirection is a 2-position switch for choosing direction
-  // of motion
-  if (analogRead(pinInDirection) < 512) {
-    motor.setSpeed(5000);
-    motor.runSpeed();
-  } else {
-    if (motor.currentPosition() == 0) {
-      motor.stop();
+    // pinInDirection is a 2-position switch for choosing direction
+    // of motion
+    if (analogRead(pinInDirection) < 512) {
+        motor.setSpeed(5000);
+        motor.runSpeed();
     } else {
-      motor.setSpeed(-5000);
-      motor.runSpeed();
+        if (motor.currentPosition() == 0) {
+            motor.stop();
+        } else {
+            motor.setSpeed(-5000);
+            motor.runSpeed();
+        }
     }
-  }
 }
 
 void state_manual_exit(void)
 {
-  // nada
+    // nada
 }
 
 void state_off_enter(void)
 {
 #ifdef DEBUG
-  Serial.print("Enter off\n");
+    Serial.print("Enter off\n");
 #endif
-  motor.stop();
+    motor.stop();
 }
 
 void state_off_update(void)
 {
-  // nada
+    // nada
 }
 
 void state_off_exit(void)
 {
-  // nada
+    // nada
 }
 
 
 void loop(void)
 {
-  // pinInAutomatic is a 3-position switch, that lets us
-  // choose between automatic sidereal tracking, stopped
-  // and manual fast mode
-  if (analogRead(pinInAutomatic) < 512) {
-    barndoor.transitionTo(stateAuto);
-  } else if (analogRead(pinInManual) < 512) {
-    barndoor.transitionTo(stateManual);
-  } else {
-    barndoor.transitionTo(stateOff);
-  }
-  barndoor.update();
+    // pinInAutomatic is a 3-position switch, that lets us
+    // choose between automatic sidereal tracking, stopped
+    // and manual fast mode
+    if (analogRead(pinInAutomatic) < 512) {
+        barndoor.transitionTo(stateAuto);
+    } else if (analogRead(pinInManual) < 512) {
+        barndoor.transitionTo(stateManual);
+    } else {
+        barndoor.transitionTo(stateOff);
+    }
+    barndoor.update();
 }
 
+//
+// Local variables:
+//  c-indent-level: 4
+//  c-basic-offset: 4
+//  indent-tabs-mode: nil
+// End:
+//
