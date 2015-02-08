@@ -100,20 +100,6 @@ long usteps_to_time(long usteps)
                   SIDE_REAL_SECS / PI);
 }
 
-void setup(void)
-{
-    pinMode(pinInSidereal, OUTPUT);
-    pinMode(pinInHighspeed, OUTPUT);
-    pinMode(pinInDirection, OUTPUT);
-
-    motor.setPinsInverted(true, false, false);
-    motor.setMaxSpeed(3000);
-
-#ifdef DEBUG
-    Serial.begin(9600);
-#endif
-}
-
 // These variables are initialized when the motor switches
 // from stopped to running, so we know our starting conditions
 
@@ -137,6 +123,22 @@ static long targetWallClockSecs;
 static long targetPositionSecs;
 // Total motor steps associated with target point
 static long targetPositionUSteps;
+
+
+// Global initialization when first turned off
+void setup(void)
+{
+    pinMode(pinInSidereal, OUTPUT);
+    pinMode(pinInHighspeed, OUTPUT);
+    pinMode(pinInDirection, OUTPUT);
+
+    motor.setPinsInverted(true, false, false);
+    motor.setMaxSpeed(3000);
+
+#ifdef DEBUG
+    Serial.begin(9600);
+#endif
+}
 
 
 // This is called whenever the motor is switch from stopped to running.
