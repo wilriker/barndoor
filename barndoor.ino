@@ -2,7 +2,7 @@
 //
 // barndoor.ino: arduino code for an astrophotography barndoor mount
 //
-// Copyright (C) 2014 Daniel P. Berrange
+// Copyright (C) 2014-2015 Daniel P. Berrange
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -25,6 +25,10 @@
 //
 //  http://fstop138.berrange.com/2014/01/building-an-barn-door-mount-part-2-calculating-mount-movements/
 //
+// The code assumes an **isosceles** drive barn door mount design.
+//
+// Other barndoor drive designs will require different mathematical
+// formulas to correct errors
 
 // http://arduino-info.wikispaces.com/HAL-LibrariesUpdates
 #include <FiniteStateMachine.h>
@@ -37,10 +41,17 @@
 //#define DEBUG
 
 // Constants to set based on hardware construction specs
-static const float STEP_SIZE_DEG = 1.8;  // degrees rotation per step
-static const float MICRO_STEPS = 8;     // number of microsteps per step
-static const float THREADS_PER_CM = 8;  // number of threads in rod per cm of length
-static const float BASE_LEN_CM = 30.5;     // length from hinge to center of rod in cm
+//
+// Assuming you followed the blog linked above, these few variables
+// should be the only things that you need to change in general
+//
+static const float STEP_SIZE_DEG = 1.8;  // Degrees rotation per step
+static const float MICRO_STEPS = 8;      // Number of microsteps per step
+static const float THREADS_PER_CM = 8;   // Number of threads in rod per cm of length
+static const float BASE_LEN_CM = 30.5;   // Length from hinge to center of rod in cm
+
+// Nothing below this line should require changing unless your barndoor
+// is not an Isoceles mount, or you changed the electrical circuit design
 
 // Constants to set based on electronic construction specs
 static const int pinOutStep = 9;      // Arduino digital pin connected to EasyDriver step
@@ -226,7 +237,7 @@ void state_sidereal_enter(void)
 //
 // XXX we don't currently use the direction switch
 // in sidereal mode. Could use it for sidereal vs lunar
-// tracking rate
+// tracking rate perhaps ?
 void state_sidereal_update(void)
 {
     long currentWallClockSecs = millis() / 1000;
@@ -251,7 +262,7 @@ void state_highspeed_enter(void)
 }
 
 
-// Called on every iteration when in manul highspeed
+// Called on every iteration when in non-tracking highspeed
 // forward/back mode. Will automatically step when it
 // hits the 100% closed position to avoid straining
 // the motor
