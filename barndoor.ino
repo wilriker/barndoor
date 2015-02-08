@@ -46,8 +46,8 @@ static const float BASE_LEN_CM = 30.5;     // length from hinge to center of rod
 static const int pinOutStep = 9;      // Arduino digital pin connected to EasyDriver step
 static const int pinOutDirection = 8; // Arduino digital pin connected to EasyDriver direction
 
-static const int pinInAutomatic = 4; // Arduino analogue pin connected to automatic mode switch
-static const int pinInManual = 5;    // Arduino analogue pin connected to manual mode switch
+static const int pinInSidereal = 4;  // Arduino analogue pin connected to sidereal mode switch
+static const int pinInHighspeed = 5; // Arduino analogue pin connected to highspeed mode switch
 static const int pinInDirection = 3; // Arduino analogue pin connected to direction switch
 
 
@@ -64,9 +64,9 @@ static AccelStepper motor(AccelStepper::DRIVER,
                           pinOutStep,
                           pinOutDirection);
 
-// A finite state machine with 3 states - auto, manual and off
-static State stateAuto = State(state_auto_enter, state_auto_update, state_auto_exit);
-static State stateManual = State(state_manual_enter, state_manual_update, state_manual_update);
+// A finite state machine with 3 states - sidereal, highspeed and off
+static State stateSidereal = State(state_sidereal_enter, state_sidereal_update, state_sidereal_exit);
+static State stateHighspeed = State(state_highspeed_enter, state_highspeed_update, state_highspeed_update);
 static State stateOff = State(state_off_enter, state_off_update, state_off_exit);
 static FSM barndoor = FSM(stateOff);
 
@@ -91,8 +91,8 @@ long usteps_to_time(long usteps)
 
 void setup(void)
 {
-    pinMode(pinInAutomatic, OUTPUT);
-    pinMode(pinInManual, OUTPUT);
+    pinMode(pinInSidereal, OUTPUT);
+    pinMode(pinInHighspeed, OUTPUT);
     pinMode(pinInDirection, OUTPUT);
 
     motor.setPinsInverted(true, false, false);
@@ -143,7 +143,7 @@ void start_tracking(void)
     targetWallClockSecs = startWallClockSecs;
 
 #ifdef DEBUG
-    Serial.print("Enter auto\n");
+    Serial.print("Enter sidereal\n");
     Serial.print("start pos usteps: ");
     Serial.print(startPositionUSteps);
     Serial.print(", start pos secs: ");
@@ -214,7 +214,7 @@ void apply_tracking(long currentWallClockSecs)
 
 // Called when switching from stopped to running
 // in sidereal tracking mode
-void state_auto_enter(void)
+void state_sidereal_enter(void)
 {
     start_tracking();
     plan_tracking();
@@ -225,9 +225,9 @@ void state_auto_enter(void)
 // tracking mode
 //
 // XXX we don't currently use the direction switch
-// in auto mode. Could use it for sidereal vs lunar
+// in sidereal mode. Could use it for sidereal vs lunar
 // tracking rate
-void state_auto_update(void)
+void state_sidereal_update(void)
 {
     long currentWallClockSecs = millis() / 1000;
 
@@ -238,15 +238,15 @@ void state_auto_update(void)
     apply_tracking(currentWallClockSecs);
 }
 
-void state_auto_exit(void)
+void state_sidereal_exit(void)
 {
     // nada
 }
 
-void state_manual_enter(void)
+void state_highspeed_enter(void)
 {
 #ifdef DEBUG
-    Serial.print("Enter manual\n");
+    Serial.print("Enter highspeed\n");
 #endif
 }
 
@@ -255,7 +255,7 @@ void state_manual_enter(void)
 // forward/back mode. Will automatically step when it
 // hits the 100% closed position to avoid straining
 // the motor
-void state_manual_update(void)
+void state_highspeed_update(void)
 {
     // pinInDirection is a 2-position switch for choosing direction
     // of motion
@@ -272,7 +272,7 @@ void state_manual_update(void)
     }
 }
 
-void state_manual_exit(void)
+void state_highspeed_exit(void)
 {
     // nada
 }
@@ -298,13 +298,13 @@ void state_off_exit(void)
 
 void loop(void)
 {
-    // pinInAutomatic is a 3-position switch, that lets us
-    // choose between automatic sidereal tracking, stopped
-    // and manual fast mode
-    if (analogRead(pinInAutomatic) < 512) {
-        barndoor.transitionTo(stateAuto);
-    } else if (analogRead(pinInManual) < 512) {
-        barndoor.transitionTo(stateManual);
+    // pinInSidereal/pinInHighspeed are two poles of a 3-position
+    // switch, that let us choose between sidereal tracking,
+    // stopped and highspeed mode
+    if (analogRead(pinInSidereal) < 512) {
+        barndoor.transitionTo(stateSidereal);
+    } else if (analogRead(pinInHighspeed) < 512) {
+        barndoor.transitionTo(stateHighspeed);
     } else {
         barndoor.transitionTo(stateOff);
     }
