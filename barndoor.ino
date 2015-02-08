@@ -50,6 +50,7 @@ static const float MICRO_STEPS = 8;      // Number of microsteps per step
 static const float THREADS_PER_CM = 8;   // Number of threads in rod per cm of length
 static const float BASE_LEN_CM = 30.5;   // Length from hinge to center of rod in cm
 static const float INITIAL_ANGLE = 0;    // Initial angle of barn doors when switched on
+static const float MAXIMUM_ANGLE = 30;   // Maximum angle to allow barn doors to open (30 deg == 2 hours)
 
 // Nothing below this line should require changing unless your barndoor
 // is not an Isoceles mount, or you changed the electrical circuit design
@@ -116,6 +117,9 @@ long usteps_to_time(long usteps)
 // If the barn door doesn't go to 100% closed, this records
 // the inital offset we started from for INITIAL_ANGLE
 static long offsetPositionUSteps;
+// The maximum we're willing to open the mount to avoid the
+// doors falling open and smashing the camera. Safety first :-)
+static long maximumPositionUSteps;
 // Total motor steps since 100% closed, at the time the
 // motor started running
 static long startPositionUSteps;
@@ -149,6 +153,7 @@ void setup(void)
     motor.setMaxSpeed(3000);
 
     offsetPositionUSteps = angle_to_usteps(INITIAL_ANGLE);
+    maximumPositionUSteps = angle_to_usteps(MAXIMUM_ANGLE);
 
 #ifdef DEBUG
     Serial.begin(9600);
@@ -245,8 +250,12 @@ void apply_tracking(long currentWallClockSecs)
     Serial.print("\n");
 #endif
 
-    motor.setSpeed(stepsPerSec);
-    motor.runSpeed();
+    if (motor_position() >= maximumPositionUSteps) {
+        motor.stop();
+    } else {
+        motor.setSpeed(stepsPerSec);
+        motor.runSpeed();
+    }
 }
 
 
@@ -298,10 +307,14 @@ void state_highspeed_update(void)
     // pinInDirection is a 2-position switch for choosing direction
     // of motion
     if (analogRead(pinInDirection) < 512) {
-        motor.setSpeed(5000);
-        motor.runSpeed();
+        if (motor_position() >= maximumPositionUSteps) {
+            motor.stop();
+        } else {
+            motor.setSpeed(5000);
+            motor.runSpeed();
+        }
     } else {
-        if (motor.currentPosition() == 0) {
+        if (motor.currentPosition() <= 0) {
             motor.stop();
         } else {
             motor.setSpeed(-5000);
