@@ -77,13 +77,6 @@ static AccelStepper motor(AccelStepper::DRIVER,
                           pinOutStep,
                           pinOutDirection);
 
-// A finite state machine with 3 states - sidereal, highspeed and off
-static State stateSidereal = State(state_sidereal_enter, state_sidereal_update, state_sidereal_exit);
-static State stateHighspeed = State(state_highspeed_enter, state_highspeed_update, state_highspeed_update);
-static State stateOff = State(state_off_enter, state_off_update, state_off_exit);
-static FSM barndoor = FSM(stateOff);
-
-
 // Given time offset from the 100% closed position, figure out
 // the total number of steps required to achieve that
 long time_to_usteps(long tsecs)
@@ -345,6 +338,12 @@ void state_off_exit(void)
 {
     // nada
 }
+
+// A finite state machine with 3 states - sidereal, highspeed and off
+static State stateSidereal = State(state_sidereal_enter, state_sidereal_update, state_sidereal_exit);
+static State stateHighspeed = State(state_highspeed_enter, state_highspeed_update, state_highspeed_update);
+static State stateOff = State(state_off_enter, state_off_update, state_off_exit);
+static FSM barndoor = FSM(stateOff);
 
 
 void loop(void)
