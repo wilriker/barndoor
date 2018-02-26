@@ -1,5 +1,5 @@
-    Barndoor Control Readme
-    =======================
+Barndoor Control Readme
+=======================
 
 This fork introduces new variants for curved rod barndoor trackers and possibly other enhancements.
 
