@@ -25,7 +25,7 @@
 //
 //  http://fstop138.berrange.com/2014/01/building-an-barn-door-mount-part-2-calculating-mount-movements/
 //
-// The code assumes an **isosceles** drive barn door mount design.
+// The code assumes an **curved rod** drive barn door mount design.
 //
 // Other barndoor drive designs will require different mathematical
 // formulas to correct errors
@@ -45,12 +45,14 @@
 // Assuming you followed the blog linked above, these few variables
 // should be the only things that you need to change in general
 //
-static const float STEP_SIZE_DEG = 1.8;  // Degrees rotation per step
-static const float MICRO_STEPS = 8;      // Number of microsteps per step
-static const float THREADS_PER_CM = 8;   // Number of threads in rod per cm of length
-static const float BASE_LEN_CM = 30.5;   // Length from hinge to center of rod in cm
-static const float INITIAL_ANGLE = 0;    // Initial angle of barn doors when switched on
-static const float MAXIMUM_ANGLE = 30;   // Maximum angle to allow barn doors to open (30 deg == 2 hours)
+static const float STEP_SIZE_DEG = 1.8;		// Degrees rotation per step
+static const float MICRO_STEPS = 8;			// Number of microsteps per step
+static const float MOTOR_GEAR_TEETH = 24;	// Number of teeth on the motor gear
+static const float ROD_GEAR_TEETH = 75;		// Number of teeth on the gear that drives the curved rod
+static const float THREAD_PITCH_MM = 0.8;	// Thread pitch in mm of threaded rod (M5: 0.8, M6: 1, M8: 1.25)
+static const float BASE_LEN_MM = 182.8;		// Length from hinge to center of rod in cm
+static const float INITIAL_ANGLE = 0;		// Initial angle of barn doors when switched on
+static const float MAXIMUM_ANGLE = 30;		// Maximum angle to allow barn doors to open (30 deg == 2 hours)
 
 // Nothing below this line should require changing unless your barndoor
 // is not an Isoceles mount, or you changed the electrical circuit design
@@ -64,12 +66,15 @@ static const int pinInHighspeed = 5; // Arduino analogue pin connected to highsp
 static const int pinInDirection = 3; // Arduino analogue pin connected to direction switch
 
 
-// Derived constants
-static const float USTEPS_PER_ROTATION = 360.0 / STEP_SIZE_DEG * MICRO_STEPS; // usteps per rod rotation
-
-
 // Standard constants
-static const float SIDE_REAL_SECS = 86164.0419; // time in seconds for 1 rotation of earth
+static const float SIDEREAL_SECS = 86164.0916; // time in seconds for 1 rotation of earth
+
+
+// Derived constants
+static const float USTEPS_PER_ROTATION = 360.0 / STEP_SIZE_DEG * MICRO_STEPS * (ROD_GEAR_TEETH / MOTOR_GEAR_TEETH); // usteps per rod rotation
+static const float DEGREE_PER_SECOND = 360.0 / (SIDEREAL_SECS); // angle of earth rotation per second
+static const float TRAVEL_PER_SECOND = tan(DEGREE_PER_SECOND) * BASE_LEN_MM; // how many mm does the rod have to travel in one second to match earth's rotation
+static const float USTEPS_PER_SECOND = TRAVEL_PER_SECOND * THREAD_PITCH_MM * USTEPS_PER_ROTATION; // usteps per second to match earth's rotation
 
 
 // Setup motor class with parameters targetting an EasyDriver board
@@ -81,9 +86,7 @@ static AccelStepper motor(AccelStepper::DRIVER,
 // the total number of steps required to achieve that
 long time_to_usteps(long tsecs)
 {
-    return (long)(USTEPS_PER_ROTATION *
-                  THREADS_PER_CM * 2.0 * BASE_LEN_CM *
-                  sin(tsecs * PI / SIDE_REAL_SECS));
+    return (long)(USTEPS_PER_SECOND * tsecs);
 }
 
 
@@ -91,7 +94,7 @@ long time_to_usteps(long tsecs)
 // that point.
 long angle_to_usteps(float angle)
 {
-    return time_to_usteps(SIDE_REAL_SECS / 360.0 * angle);
+    return time_to_usteps(SIDEREAL_SECS / 360.0 * angle);
 }
 
 
@@ -99,9 +102,7 @@ long angle_to_usteps(float angle)
 // the corresponding total tracking time in seconds
 long usteps_to_time(long usteps)
 {
-    return (long)(asin(usteps /
-                       (USTEPS_PER_ROTATION * THREADS_PER_CM * 2.0 * BASE_LEN_CM)) *
-                  SIDE_REAL_SECS / PI);
+    return (long)(USTEPS_PER_SECOND * usteps);
 }
 
 // These variables are initialized when the motor switches
