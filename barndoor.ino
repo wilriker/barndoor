@@ -37,9 +37,30 @@
 // If you use an **isosceles** barndoor tracker use the following header
 //#include "isosceles.h"
 
+static const float HIGHSPEED = 5000; // Maximum speed/highspeed mode
+static const float INITIAL_ANGLE = 0;   // Initial angle of barn doors when switched on
+static const float MAXIMUM_ANGLE = 30;    // Maximum angle to allow barn doors to open (30 deg == 2 hours)
+
 // We don't want to send debug over the serial port by default since
 // it seriously slows down the main loop causing tracking errors
 //#define DEBUG
+
+// Nothing below this line should require changing unless
+// you changed the electrical circuit design
+
+// Constants to set based on electronic construction specs
+static const int pinOutStep = 9;      // Arduino digital pin connected to EasyDriver step
+static const int pinOutDirection = 8; // Arduino digital pin connected to EasyDriver direction
+
+static const int pinInSidereal = 4;  // Arduino analogue pin connected to sidereal mode switch
+static const int pinInHighspeed = 5; // Arduino analogue pin connected to highspeed mode switch
+static const int pinInDirection = 3; // Arduino analogue pin connected to direction switch
+
+
+// Setup motor class with parameters targetting an EasyDriver board
+static AccelStepper motor(AccelStepper::DRIVER,
+                          pinOutStep,
+                          pinOutDirection);
 
 // These variables are initialized when the motor switches
 // from stopped to running, so we know our starting conditions
@@ -80,7 +101,7 @@ void setup(void)
     pinMode(pinInDirection, OUTPUT);
 
     motor.setPinsInverted(true, false, false);
-    motor.setMaxSpeed(3000);
+    motor.setMaxSpeed(HIGHSPEED);
 
     offsetPositionUSteps = angle_to_usteps(INITIAL_ANGLE);
     maximumPositionUSteps = angle_to_usteps(MAXIMUM_ANGLE);
@@ -215,18 +236,6 @@ void state_sidereal_update(void)
     apply_tracking(currentWallClockSecs);
 }
 
-void state_sidereal_exit(void)
-{
-    // nada
-}
-
-void state_highspeed_enter(void)
-{
-#ifdef DEBUG
-    Serial.print("Enter highspeed\n");
-#endif
-}
-
 
 // Called on every iteration when in non-tracking highspeed
 // forward/back mode. Will automatically step when it
@@ -240,22 +249,17 @@ void state_highspeed_update(void)
         if (motor_position() >= maximumPositionUSteps) {
             motor.stop();
         } else {
-            motor.setSpeed(5000);
+            motor.setSpeed(HIGHSPEED);
             motor.runSpeed();
         }
     } else {
         if (motor.currentPosition() <= 0) {
             motor.stop();
         } else {
-            motor.setSpeed(-5000);
+            motor.setSpeed(-HIGHSPEED);
             motor.runSpeed();
         }
     }
-}
-
-void state_highspeed_exit(void)
-{
-    // nada
 }
 
 void state_off_enter(void)
@@ -266,20 +270,10 @@ void state_off_enter(void)
     motor.stop();
 }
 
-void state_off_update(void)
-{
-    // nada
-}
-
-void state_off_exit(void)
-{
-    // nada
-}
-
 // A finite state machine with 3 states - sidereal, highspeed and off
-static State stateSidereal = State(state_sidereal_enter, state_sidereal_update, state_sidereal_exit);
-static State stateHighspeed = State(state_highspeed_enter, state_highspeed_update, state_highspeed_update);
-static State stateOff = State(state_off_enter, state_off_update, state_off_exit);
+static State stateSidereal = State(state_sidereal_enter, state_sidereal_update, NO_EXIT);
+static State stateHighspeed = State(state_highspeed_update);
+static State stateOff = State(state_off_enter, NO_UPDATE, NO_EXIT);
 static FSM barndoor = FSM(stateOff);
 
 
