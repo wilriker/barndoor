@@ -1,7 +1,16 @@
-Barndoor Control Readme
+Barndoor Control
 =======================
 
 This fork introduces new variants for curved rod barndoor trackers and possibly other enhancements.
+
+To use either isosceles or curved rod barndoor trackers you have to uncomment the appropriate
+	#include "<type>.h"
+line in `barndoor.ino` and adjust variables at the top of the header file. The advantage of this
+implementation for curved rod is that if you have not exactly met the distance requirements between
+middle of the hinge and middle of the rod the code will compensate for this.
+
+---
+Original contents of README below
 
 This project contains an arduino program suitable for controlling an
 astrophotography barndoor mount. The circuit being controlled is
