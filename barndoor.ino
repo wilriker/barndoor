@@ -52,9 +52,9 @@ static const float MAXIMUM_ANGLE = 30;    // Maximum angle to allow barn doors t
 static const int pinOutStep = 9;      // Arduino digital pin connected to EasyDriver step
 static const int pinOutDirection = 8; // Arduino digital pin connected to EasyDriver direction
 
-static const int pinInSidereal = 4;  // Arduino analogue pin connected to sidereal mode switch
-static const int pinInHighspeed = 5; // Arduino analogue pin connected to highspeed mode switch
-static const int pinInDirection = 3; // Arduino analogue pin connected to direction switch
+static const int pinInSidereal = 4;  // Arduino digital pin connected to sidereal mode switch
+static const int pinInHighspeed = 5; // Arduino digital pin connected to highspeed mode switch
+static const int pinInDirection = 3; // Arduino digital pin connected to direction switch
 
 
 // Setup motor class with parameters targetting an EasyDriver board
@@ -96,9 +96,12 @@ static long targetPositionUSteps;
 // Global initialization when first turned off
 void setup(void)
 {
-    pinMode(pinInSidereal, OUTPUT);
-    pinMode(pinInHighspeed, OUTPUT);
-    pinMode(pinInDirection, OUTPUT);
+    pinMode(pinInSidereal, INPUT_PULLUP);
+    pinMode(pinInHighspeed, INPUT_PULLUP);
+    pinMode(pinInDirection, INPUT_PULLUP);
+
+    pinMode(pinOutStep, OUTPUT);
+    pinMode(pinOutDirection, OUTPUT);
 
     motor.setPinsInverted(true, false, false);
     motor.setMaxSpeed(HIGHSPEED);
@@ -196,7 +199,7 @@ void apply_tracking(long currentWallClockSecs)
     Serial.print(targetPositionUSteps);
     Serial.print("  curr ");
     Serial.print(motor_position());
-    Serial.print("  left");
+    Serial.print("  left ");
     Serial.print(stepsLeft);
     Serial.print("\n");
 #endif
@@ -245,7 +248,7 @@ void state_highspeed_update(void)
 {
     // pinInDirection is a 2-position switch for choosing direction
     // of motion
-    if (analogRead(pinInDirection) < 512) {
+    if (digitalRead(pinInDirection) == LOW) {
         if (motor_position() >= maximumPositionUSteps) {
             motor.stop();
         } else {
@@ -282,9 +285,9 @@ void loop(void)
     // pinInSidereal/pinInHighspeed are two poles of a 3-position
     // switch, that let us choose between sidereal tracking,
     // stopped and highspeed mode
-    if (analogRead(pinInSidereal) < 512) {
+    if (digitalRead(pinInSidereal) == LOW) {
         barndoor.transitionTo(stateSidereal);
-    } else if (analogRead(pinInHighspeed) < 512) {
+    } else if (digitalRead(pinInHighspeed) == LOW) {
         barndoor.transitionTo(stateHighspeed);
     } else {
         barndoor.transitionTo(stateOff);
