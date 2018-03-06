@@ -37,8 +37,10 @@
 // If you use an **isosceles** barndoor tracker use the following header
 //#include "isosceles.h"
 
+static const float MAX_CURRENT = 1.2; // Max current that the motor allows per phase
+static const float PWM_VOLTAGE = (2.2-MAX_CURRENT)/0.63; // Voltage on PWM out pin (check driver's manual to get the correct value)
 static const float HIGHSPEED = 5000; // Maximum speed/highspeed mode
-static const float INITIAL_ANGLE = 0;   // Initial angle of barn doors when switched on
+static const float INITIAL_ANGLE = 5;   // Initial angle of barn doors when switched on
 static const float MAXIMUM_ANGLE = 30;    // Maximum angle to allow barn doors to open (30 deg == 2 hours)
 
 // We don't want to send debug over the serial port by default since
@@ -49,12 +51,18 @@ static const float MAXIMUM_ANGLE = 30;    // Maximum angle to allow barn doors t
 // you changed the electrical circuit design
 
 // Constants to set based on electronic construction specs
-static const int pinOutStep = 9;      // Arduino digital pin connected to EasyDriver step
-static const int pinOutDirection = 8; // Arduino digital pin connected to EasyDriver direction
+static const int PWM_VALUE = round(((256.0 / 5.0) * PWM_VOLTAGE) + 0.5); // Ceil'd PWM value
 
-static const int pinInSidereal = 4;  // Arduino digital pin connected to sidereal mode switch
-static const int pinInHighspeed = 5; // Arduino digital pin connected to highspeed mode switch
-static const int pinInDirection = 3; // Arduino digital pin connected to direction switch
+static const int pinOutMS1 = 12;      // Arduino digital pin connected to Driver MS1
+static const int pinOutMS2 = 11;      // Arduino digital pin connected to Driver MS2
+static const int pinOutI1PWM = 9;     // Arduino digital pin connected to Driver I1 for current limiting
+static const int pinOutSleep = 8;     // Arduino digital pin connected to Driver SLEEP
+static const int pinOutStep = 7;      // Arduino digital pin connected to Driver step
+static const int pinOutDirection = 6; // Arduino digital pin connected to Driver direction
+
+static const int pinInHighspeed = 5;  // Arduino digital pin connected to highspeed mode switch
+static const int pinInSidereal = 4;   // Arduino digital pin connected to sidereal mode switch
+static const int pinInDirection = 3;  // Arduino digital pin connected to direction switch
 
 
 // Setup motor class with parameters targetting an EasyDriver board
@@ -102,6 +110,12 @@ void setup(void)
 
     pinMode(pinOutStep, OUTPUT);
     pinMode(pinOutDirection, OUTPUT);
+
+    // Setup driver with defined states
+    digitalWrite(pinOutMS1, HIGH);
+    digitalWrite(pinOutMS2, HIGH);
+    analogWrite(pinOutI1PWM, PWM_VALUE);
+    digitalWrite(pinOutSleep, HIGH);
 
     motor.setPinsInverted(true, false, false);
     motor.setMaxSpeed(HIGHSPEED);
@@ -194,7 +208,7 @@ void apply_tracking(long currentWallClockSecs)
     long stepsLeft = targetPositionUSteps - motor_position();
     float stepsPerSec = (float)stepsLeft / (float)timeLeft;
 
-#ifdef DEBUG32
+#ifdef DEBUG
     Serial.print("Target ");
     Serial.print(targetPositionUSteps);
     Serial.print("  curr ");
