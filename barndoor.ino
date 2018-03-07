@@ -51,14 +51,15 @@ static const float MAXIMUM_ANGLE = 30;    // Maximum angle to allow barn doors t
 // you changed the electrical circuit design
 
 // Constants to set based on electronic construction specs
-static const int PWM_VALUE = round(((256.0 / 5.0) * PWM_VOLTAGE) + 0.5); // Ceil'd PWM value
+static const int PWM_VALUE = ceil((255.0 / 5.0) * PWM_VOLTAGE); // Ceil'd PWM value
 
-static const int pinOutMS1 = 12;      // Arduino digital pin connected to Driver MS1
-static const int pinOutMS2 = 11;      // Arduino digital pin connected to Driver MS2
-static const int pinOutI1PWM = 9;     // Arduino digital pin connected to Driver I1 for current limiting
-static const int pinOutSleep = 8;     // Arduino digital pin connected to Driver SLEEP
-static const int pinOutStep = 7;      // Arduino digital pin connected to Driver step
-static const int pinOutDirection = 6; // Arduino digital pin connected to Driver direction
+static const int pinOutMS1       = 11; // Arduino digital pin connected to Driver MS1
+static const int pinOutMS2       = 10; // Arduino digital pin connected to Driver MS2
+static const int pinOutI1        =  9; // Arduino digital pin connected to Driver I1 for current limiting
+static const int pinOutI2        =  8; // Arduino digital pin connected to Driver I2 for current limiting
+static const int pinOutSleep     =  7; // Arduino digital pin connected to Driver SLEEP
+static const int pinOutStep      =  6; // Arduino digital pin connected to Driver STEP
+static const int pinOutDirection =  5; // Arduino digital pin connected to Driver DIR
 
 static const int pinInHighspeed = 5;  // Arduino digital pin connected to highspeed mode switch
 static const int pinInSidereal = 4;   // Arduino digital pin connected to sidereal mode switch
@@ -112,10 +113,11 @@ void setup(void)
     pinMode(pinOutDirection, OUTPUT);
 
     // Setup driver with defined states
-    digitalWrite(pinOutMS1, HIGH);
-    digitalWrite(pinOutMS2, HIGH);
-    analogWrite(pinOutI1PWM, PWM_VALUE);
-    digitalWrite(pinOutSleep, HIGH);
+    digitalWrite(pinOutMS1, HIGH); // Required for 1/8th steps
+    digitalWrite(pinOutMS2, HIGH); // Required for 1/8th steps
+    analogWrite(pinOutI1, PWM_VALUE);
+    digitalWrite(pinOutI2, LOW); // Required to set exact voltage via above PWM
+    digitalWrite(pinOutSleep, HIGH); // This needs to be HIGH to enable the driver
 
     motor.setPinsInverted(true, false, false);
     motor.setMaxSpeed(HIGHSPEED);
@@ -285,12 +287,25 @@ void state_off_enter(void)
     Serial.print("Enter off\n");
 #endif
     motor.stop();
+    // Send driver to low-power mode
+    digitalWrite(pinOutSleep, LOW);
+}
+
+void state_off_exit(void)
+{
+#ifdef DEBUG
+    Serial.print("Exit off\n");
+#endif
+    // Wakeup driver
+    digitalWrite(pinOutSleep, HIGH);
+    // Driver requires approximately 1ms to wake-up - be safe with 10ms wait
+    delay(10);
 }
 
 // A finite state machine with 3 states - sidereal, highspeed and off
 static State stateSidereal = State(state_sidereal_enter, state_sidereal_update, NO_EXIT);
-static State stateHighspeed = State(state_highspeed_update);
-static State stateOff = State(state_off_enter, NO_UPDATE, NO_EXIT);
+static State stateHighspeed = State(NO_ENTER, state_highspeed_update, NO_EXIT);
+static State stateOff = State(state_off_enter, NO_UPDATE, state_off_exit);
 static FSM barndoor = FSM(stateOff);
 
 
