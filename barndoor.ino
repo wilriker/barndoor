@@ -2,7 +2,7 @@
 //
 // barndoor.ino: arduino code for an astrophotography barndoor mount
 //
-// Copyright (C) 2014-2015 Daniel P. Berrange
+// Copyright (C) 2014-2015 Daniel P. Berrange, 2018 Manuel Coenen
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 //
 // This code is used to drive the circuit described at
 //
-//  http://fstop138.berrange.com/2014/01/building-an-barn-door-mount-part-1-arduino-stepper-motor-control/
+//  https://github.com/wilriker/barndoor
 //
 // Based on the maths calculations documented at
 //
