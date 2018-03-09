@@ -21,27 +21,24 @@ static const float SIDEREAL_SECS = 86164.0916; // time in seconds for 1 rotation
 
 // Given time offset from the 100% closed position, figure out
 // the total number of steps required to achieve that
-long time_to_usteps(long tsecs)
-{
-    return (long)(USTEPS_PER_ROTATION *
-                  THREADS_PER_CM * 2.0 * BASE_LEN_CM *
-                  sin(tsecs * PI / SIDEREAL_SECS));
+long time_to_usteps(long tsecs) {
+  return (long)(USTEPS_PER_ROTATION *
+                THREADS_PER_CM * 2.0 * BASE_LEN_CM *
+                sin(tsecs * PI / SIDEREAL_SECS));
 }
 
 
 // Given an angle, figure out the usteps required to get to
 // that point.
-long angle_to_usteps(float angle)
-{
-    return time_to_usteps(SIDEREAL_SECS / 360.0 * angle);
+long angle_to_usteps(float angle) {
+  return time_to_usteps(SIDEREAL_SECS / 360.0 * angle);
 }
 
 
 // Given total number of steps from 100% closed position, figure out
 // the corresponding total tracking time in seconds
-long usteps_to_time(long usteps)
-{
-    return (long)(asin(usteps /
-                       (USTEPS_PER_ROTATION * THREADS_PER_CM * 2.0 * BASE_LEN_CM)) *
-                  SIDEREAL_SECS / PI);
+long usteps_to_time(long usteps) {
+  return (long)(asin(usteps /
+                     (USTEPS_PER_ROTATION * THREADS_PER_CM * 2.0 * BASE_LEN_CM)) *
+                SIDEREAL_SECS / PI);
 }

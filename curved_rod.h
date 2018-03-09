@@ -26,23 +26,20 @@ static const float USTEPS_PER_SECOND = (MM_LIFT_PER_SECOND / THREAD_PITCH_MM) * 
 
 // Given time offset from the 100% closed position, figure out
 // the total number of steps required to achieve that
-long time_to_usteps(long tsecs)
-{
-    return (long)(USTEPS_PER_SECOND * tsecs);
+long time_to_usteps(long tsecs) {
+  return (long)(USTEPS_PER_SECOND * tsecs);
 }
 
 
 // Given an angle, figure out the usteps required to get to
 // that point.
-long angle_to_usteps(float angle)
-{
-    return time_to_usteps(SIDEREAL_SECS / 360.0 * angle);
+long angle_to_usteps(float angle) {
+  return time_to_usteps(SIDEREAL_SECS / 360.0 * angle);
 }
 
 
 // Given total number of steps from 100% closed position, figure out
 // the corresponding total tracking time in seconds
-long usteps_to_time(long usteps)
-{
-    return (long)(USTEPS_PER_SECOND * usteps);
+long usteps_to_time(long usteps) {
+  return (long)(USTEPS_PER_SECOND * usteps);
 }
