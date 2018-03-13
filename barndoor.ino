@@ -53,18 +53,18 @@ static const float MAXIMUM_ANGLE = 30;    // Maximum angle to allow barn doors t
 // Constants to set based on electronic construction specs
 static const int PWM_VALUE = ceil((255.0 / 5.0) * PWM_VOLTAGE); // Ceil'd PWM value
 
-static const int pinOutEnable    = 12; // Arduino digital pin connected to Driver ENABLE
-static const int pinOutMS1       = 11; // Arduino digital pin connected to Driver MS1
-static const int pinOutMS2       = 10; // Arduino digital pin connected to Driver MS2
-static const int pinOutI1        =  9; // Arduino digital pin connected to Driver I1 for current limiting
-static const int pinOutI2        =  8; // Arduino digital pin connected to Driver I2 for current limiting
-static const int pinOutSleep     =  7; // Arduino digital pin connected to Driver SLEEP
-static const int pinOutStep      =  6; // Arduino digital pin connected to Driver STEP
-static const int pinOutDirection =  5; // Arduino digital pin connected to Driver DIR
+static const int pinOutEnable    =  9; // Arduino digital pin connected to Driver ENABLE
+static const int pinOutMS1       =  8; // Arduino digital pin connected to Driver MS1
+static const int pinOutMS2       =  7; // Arduino digital pin connected to Driver MS2
+static const int pinOutI1        =  6; // Arduino digital pin connected to Driver I1 for current limiting
+static const int pinOutI2        =  5; // Arduino digital pin connected to Driver I2 for current limiting
+static const int pinOutSleep     =  4; // Arduino digital pin connected to Driver SLEEP
+static const int pinOutStep      =  3; // Arduino digital pin connected to Driver STEP
+static const int pinOutDirection =  2; // Arduino digital pin connected to Driver DIR
 
-static const int pinInHighspeed = 5;  // Arduino digital pin connected to highspeed mode switch
-static const int pinInSidereal = 4;   // Arduino digital pin connected to sidereal mode switch
-static const int pinInDirection = 3;  // Arduino digital pin connected to direction switch
+static const int pinInHighspeed  = 12; // Arduino digital pin connected to highspeed mode switch
+static const int pinInSidereal   = 11; // Arduino digital pin connected to sidereal mode switch
+static const int pinInDirection  = 10; // Arduino digital pin connected to direction switch
 
 
 // Setup motor class with parameters targetting an EasyDriver board
@@ -77,10 +77,10 @@ static AccelStepper motor(AccelStepper::DRIVER,
 
 // If the barn door doesn't go to 100% closed, this records
 // the inital offset we started from for INITIAL_ANGLE
-static long offsetPositionUSteps;
+static const long offsetPositionUSteps = angle_to_usteps(INITIAL_ANGLE);
 // The maximum we're willing to open the mount to avoid the
 // doors falling open and smashing the camera. Safety first :-)
-static long maximumPositionUSteps;
+static const long maximumPositionUSteps = angle_to_usteps(MAXIMUM_ANGLE);
 // Total motor steps since 100% closed, at the time the
 // motor started running
 static long startPositionUSteps;
@@ -111,7 +111,6 @@ void setup(void) {
 	pinMode(pinOutI1, OUTPUT);
 	pinMode(pinOutI2, OUTPUT);
 	pinMode(pinOutSleep, OUTPUT);
-
 	pinMode(pinOutStep, OUTPUT);
 	pinMode(pinOutDirection, OUTPUT);
 
@@ -128,9 +127,6 @@ void setup(void) {
 	motor.setEnablePin(pinOutSleep);
 	motor.setPinsInverted(true, false, false);
 	motor.setMaxSpeed(HIGHSPEED);
-
-	offsetPositionUSteps = angle_to_usteps(INITIAL_ANGLE);
-	maximumPositionUSteps = angle_to_usteps(MAXIMUM_ANGLE);
 
 #ifdef DEBUG
 	Serial.begin(9600);
@@ -223,9 +219,16 @@ void apply_tracking(long currentWallClockSecs) {
 	Serial.print("\n");
 #endif
 
-	if (motor_position() >= maximumPositionUSteps) {
+	if (motor_position() >= maximumPositionUSteps || motor.currentPosition() <= 0) {
 		motor.stop();
 	} else {
+		// Decide on direction to run
+		// This can be used to
+		// a) switch direction for use on northern/southern hemisphere
+		// b) make "faster" star trail images (even though they will be fainter)
+		if (digitalRead(pinInDirection) == HIGH) {
+			stepsPerSec *= -1;
+		}
 		motor.setSpeed(stepsPerSec);
 		motor.runSpeed();
 	}
@@ -242,10 +245,6 @@ void state_sidereal_enter(void) {
 
 // Called on every tick, when running in sidereal
 // tracking mode
-//
-// XXX we don't currently use the direction switch
-// in sidereal mode. Could use it for sidereal vs lunar
-// tracking rate perhaps ?
 void state_sidereal_update(void) {
 	long currentWallClockSecs = millis() / 1000;
 
@@ -296,14 +295,14 @@ void state_off_exit(void) {
 #endif
 	// Wakeup driver
 	motor.enableOutputs();
-	// Driver requires approximately 1ms to wake-up - be safe with 10ms wait
-	delay(10);
+	// Driver requires approximately 1ms to wake-up - be safe and wait
+	delay(5);
 }
 
 // A finite state machine with 3 states - sidereal, highspeed and off
-static State stateSidereal = State(state_sidereal_enter, state_sidereal_update, NO_EXIT);
-static State stateHighspeed = State(NO_ENTER, state_highspeed_update, NO_EXIT);
-static State stateOff = State(state_off_enter, NO_UPDATE, state_off_exit);
+static State stateSidereal = State(&state_sidereal_enter, &state_sidereal_update, NO_EXIT);
+static State stateHighspeed = State(NO_ENTER, &state_highspeed_update, NO_EXIT);
+static State stateOff = State(&state_off_enter, NO_UPDATE, &state_off_exit);
 static FSM barndoor = FSM(stateOff);
 
 
